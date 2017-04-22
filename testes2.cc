@@ -349,6 +349,8 @@ VanetRoutingExperiment::CommandSetup (int argc, char **argv)
   cmd.AddValue ("interval", "(WAVE) BSM interval (s)", m_waveInterval);
   cmd.AddValue ("gpsaccuracy", "GPS time accuracy, in ns", m_gpsAccuracyNs);
   cmd.AddValue ("txmaxdelay", "Tx max delay, in ms", m_txMaxDelayMs);
+  cmd.AddValue ("streamIndex", "Stream Index (Ramdomness), number", m_streamIndex);
+  
   cmd.Parse (argc, argv);
 
   // transfer config-store values to config parameters
