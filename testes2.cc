@@ -1,8 +1,5 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2005,2006,2007 INRIA
- * Copyright (c) 2013 Dalian University of Technology
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation;
@@ -12,12 +9,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
- * Author: Junling Bu <linlinjavaer@gmail.com>
+ * Based on vanet-routing-compare.cc - https://www.nsnam.org/doxygen/vanet-routing-compare_8cc.html
+ * Author: Tiago do Vale Saraiva <tiagosarai@gmail.com>, <tiago.saraiva@uniriotec.br>
  *
  */
 /**
@@ -99,8 +92,7 @@ public:
   NodeContainer c;
   YansWifiChannelHelper wifiChannel;
   uint32_t m_port;
-  
-  
+    
   };
 
 void VanetRoutingExperiment::Run ()
@@ -189,8 +181,6 @@ void VanetRoutingExperiment::configeral ()
   Ipv4AddressHelper ipv4; //endereçamento IP
   ipv4.SetBase ("10.1.0.0", "255.255.0.0"); //define faixa de endereçamento
   i = ipv4.Assign(devices); //atribui endereços
-
- 
 }
 
 void VanetRoutingExperiment::SetupWaveMessages ()
