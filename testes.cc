@@ -1,8 +1,5 @@
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2005,2006,2007 INRIA
- * Copyright (c) 2013 Dalian University of Technology
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation;
@@ -12,12 +9,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
- * Author: Junling Bu <linlinjavaer@gmail.com>
+ * Based on vanet-routing-compare.cc - https://www.nsnam.org/doxygen/vanet-routing-compare_8cc.html
+ * Author: Tiago do Vale Saraiva <tiagosarai@gmail.com>, <tiago.saraiva@uniriotec.br>
  *
  */
 /**
@@ -64,7 +57,6 @@
 #include "ns3/wave-bsm-helper.h"
 #include "ns3/wave-helper.h"
 #include "ns3/netanim-module.h"
-
 
 /*
 #include "ns3/flow-monitor-module.h"
@@ -221,7 +213,6 @@ void VanetRoutingExperiment::SetupWaveMessages ()
                           MilliSeconds (m_txMaxDelayMs));
 
   m_streamIndex += m_waveBsmHelper.AssignStreams (c, m_streamIndex);
-
 
  // WaveBsmHelper::GetNodesMoving ()[nodeId] = 1;
 
