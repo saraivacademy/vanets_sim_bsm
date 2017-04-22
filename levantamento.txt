@@ -1,0 +1,24 @@
+Intervalo de transmissão (0.10, 1, 10) 
+Tamanho dos pacotes (150, 300, 600 bytes)
+Modelos de propagação (TRG, Friss)
+trace(unter, colone) - 1547 veicuos
+=============================//======================
+
+template (TRG, 10ms, 300bytes, unter, 99 vei) - time_10ms_unter_x {1-25}
+template (TRG, 1s, 300bytes, unter, 99 vei) - time_1s_unter_x {1-25}
+template (TRG, 10s, 300bytes, unter, 99 vei) - time_10s_unter_x {1-25}
+template (TRG, 1s, 150bytes, unter, 99 vei) - size_150b_unter_x {1-25}
+template (TRG, 1s, 300bytes, unter, 99 vei) - size_300b_unter_x {1-25}
+template (TRG, 1s, 600bytes, unter, 99 vei) - size_600b_unter_x {1-25}
+template (Friis, 1s, 300bytes, unter, 99 vei) - mod_friis_unter_x {1-25}
+template (TRG, 1s, 300bytes, unter, 99 vei) - mod_trg_unter_x {1-25}
+
+template (TRG, 1s, 150bytes, colog, 1547 vei) - size_150b_colo_x {1-25}
+template (TRG, 1s, 300bytes, colog, 1547 vei) - size_300b_colo_x {1-25}
+template (TRG, 1s, 600bytes, colog, 1547 vei) - size_600b_colo_x {1-25}
+template (TRG, 10ms, 300bytes, colog, 1547 vei) - time_10ms_colo_x {1-25}
+template (TRG, 1s, 300bytes, colog, 1547 vei) - time_1s_colo_x {1-25}
+template (TRG, 10s, 300bytes, colog, 1547 vei) time_10s_colo_x {1-25}
+template (TRG, 1s, 300bytes, cologne, 1547)  - mod_trg_colo_x {1-25}
+template (Friis, 1s, 300bytes, cologne, 1547) - mod_friis_colo_x {1-25}
+
