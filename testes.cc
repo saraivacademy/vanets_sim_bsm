@@ -1,0 +1,441 @@
+/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2005,2006,2007 INRIA
+ * Copyright (c) 2013 Dalian University of Technology
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
+ * Author: Junling Bu <linlinjavaer@gmail.com>
+ *
+ */
+/**
+ * Script de Vanets, utilizando:
+ * 802.11p
+ * trace de mobilidade de utras com 99 veículos
+ * possibilidade de dois modelos de propagação: FriisPropagationLossModel e TwoRayGroundPropagationLossModel
+ * aplicação BSM com estatísticas ??? 
+ */
+
+#include <fstream>
+#include <iostream>
+#include "ns3/applications-module.h"
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/wifi-module.h"
+#include "ns3/vector.h"
+#include "ns3/string.h"
+#include "ns3/socket.h"
+#include "ns3/double.h"
+#include "ns3/config-store-module.h"
+#include "ns3/config.h"
+#include "ns3/command-line.h"
+#include "ns3/log.h"
+#include "ns3/mobility-model.h"
+#include "ns3/mobility-module.h"
+#include "ns3/mobility-helper.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/position-allocator.h"
+#include "ns3/internet-module.h"
+#include "ns3/integer.h"
+#include "ns3/internet-stack-helper.h"
+#include "ns3/ipv4-address-helper.h"
+#include "ns3/ipv4-interface-container.h"
+#include "ns3/ocb-wifi-mac.h"
+#include "ns3/wifi-80211p-helper.h"
+#include "ns3/aodv-module.h"
+#include "ns3/olsr-module.h"
+#include "ns3/dsdv-module.h"
+#include "ns3/dsr-module.h"
+#include "ns3/itu-r-1411-los-propagation-loss-model.h"
+#include "ns3/wave-mac-helper.h"
+#include "ns3/wave-mac-helper.h"
+#include "ns3/wave-bsm-helper.h"
+#include "ns3/wave-helper.h"
+#include "ns3/netanim-module.h"
+
+
+/*
+#include "ns3/flow-monitor-module.h"
+#include "ns3/flow-monitor-helper.h"
+#include "ns3/flow-classifier.h"
+#include "ns3/flow-probe.h"
+#include "ns3/histogram.h"
+#include "ns3/ipv4-flow-classifier.h"
+#include "ns3/ipv4-flow-probe.h"
+*/
+
+using namespace ns3;
+using namespace dsr;
+
+class VanetRoutingExperiment
+{
+public:
+
+  void CheckThroughput ();
+  void SetupWaveMessages ();
+  void Run ();
+  void configeral ();
+  void WriteCsvHeader ();
+  void ProcessOutputs ();
+
+ // static void CourseChange (std::ostream *os, std::string foo, Ptr<const MobilityModel> mobility);
+  uint32_t m_nNodes;
+  std::string m_traceFile;
+  double m_TotalSimTime;
+  std::string m_lossModelName;
+  uint32_t m_wavePacketSize;
+  double m_waveInterval;
+  double m_gpsAccuracyNs;
+  WaveBsmHelper m_waveBsmHelper;
+  std::vector <double> m_txSafetyRanges;
+  int chAccessMode = 0;
+  double m_txMaxDelayMs;
+  int64_t m_streamIndex;
+  std::string m_CSVfileName;
+  std::string m_CSVfileName2;  
+  Ipv4InterfaceContainer i;
+  NodeContainer c;
+  YansWifiChannelHelper wifiChannel;
+  uint32_t m_port;
+  //FlowMonitorHelper flowmonHelper;
+  //Ptr<FlowMonitor> monitor;
+  //FlowMonitorHelper flowmon_helper;
+  
+  };
+
+void VanetRoutingExperiment::Run ()
+{
+ // NS_LOG_INFO ("Run Simulation.");
+  CheckThroughput ();
+  WriteCsvHeader ();
+  Simulator::Stop (Seconds (m_TotalSimTime));
+  AnimationInterface anim ("animation.xml");
+  anim.SetMaxPktsPerTraceFile(5569200);
+  Simulator::Run ();
+  Simulator::Destroy ();
+}
+
+void VanetRoutingExperiment::configeral ()
+{
+  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+  //m_lossModelName = "ns3::FriisPropagationLossModel";
+  m_lossModelName = "ns3::TwoRayGroundPropagationLossModel";
+  m_TotalSimTime = 300.01;
+  m_nNodes = 1547;
+  m_traceFile = "src/wave/examples/ns5min.mob";
+  m_wavePacketSize = 200; //pode ser variado
+  m_waveInterval = 1.0; //pode ser variado
+  m_gpsAccuracyNs = 40; //tem que entender
+  m_txMaxDelayMs = 10; //tem que entender
+  m_streamIndex = 0; //tem que entender
+  m_CSVfileName = "low_vanet-routing-compare.csv";
+  m_CSVfileName2 = "low_vanet-routing-compare2.csv";
+
+  m_txSafetyRanges.resize (10, 0); //tem que entender
+  m_txSafetyRanges[0] = 50.0;
+  m_txSafetyRanges[1] = 100.0;
+  m_txSafetyRanges[2] = 150.0;
+  m_txSafetyRanges[3] = 200.0;
+  m_txSafetyRanges[4] = 250.0;
+  m_txSafetyRanges[5] = 300.0;
+  m_txSafetyRanges[6] = 350.0;
+  m_txSafetyRanges[7] = 400.0;
+  m_txSafetyRanges[8] = 450.0;
+  m_txSafetyRanges[9] = 500.0;
+  m_port = 9;
+  
+  std::string phyMode ("OfdmRate6MbpsBW10MHz"); //explicar
+  bool verbose = false; //explicar
+
+  c.Create (m_nNodes); //criação dos nós
+
+  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel"); //explicar
+  
+  if (m_lossModelName == "ns3::TwoRayGroundPropagationLossModel") //configurando modelo de perdas no espaço
+    {
+      wifiChannel.AddPropagationLoss (m_lossModelName, "Frequency", DoubleValue (5.9e9), "HeightAboveZ", DoubleValue (1.5));
+    }
+  else
+    {
+       wifiChannel.AddPropagationLoss (m_lossModelName, "Frequency", DoubleValue (5.9e9));
+    }
+
+  wifiChannel.AddPropagationLoss ("ns3::NakagamiPropagationLossModel"); //adiciona propagação por multiplos caminhos (fading)
+
+  Ptr<YansWifiChannel> channel = wifiChannel.Create (); //explicar
+  wifiPhy.SetChannel (channel); //explicar
+ // wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11);
+  NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default (); //explicar
+  Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default (); //explicar
+
+  if (verbose) //necessário?
+    {
+      wifi80211p.EnableLogComponents ();      // Turn on all Wifi 802.11p logging
+    }
+
+  wifi80211p.SetRemoteStationManager ("ns3::ConstantRateWifiManager", //entender
+                                      "DataMode",StringValue (phyMode),
+                                      "ControlMode",StringValue (phyMode));
+
+  NetDeviceContainer devices = wifi80211p.Install (wifiPhy, wifi80211pMac, c); //finaliza config. parte fisica
+
+ // wifiPhy.EnablePcap ("wave-simple-80211p", devices);
+
+  Ns2MobilityHelper ns2 = Ns2MobilityHelper (m_traceFile); //configura mobilidade baseada no trace
+  ns2.Install (); //instala mobilidade
+
+  InternetStackHelper internet; //explicar
+  internet.Install (c); //explicar
+  Ipv4AddressHelper ipv4; //endereçamento IP
+  ipv4.SetBase ("10.1.0.0", "255.255.0.0"); //define faixa de endereçamento
+  i = ipv4.Assign(devices); //atribui endereços
+
+  //monitor = flowmon_helper.InstallAll();
+  //monitor.SetAttribute ("DelayBinWidth", ns3.DoubleValue(0.001));
+
+}
+
+void VanetRoutingExperiment::SetupWaveMessages ()
+{
+  WaveBsmHelper::GetNodesMoving ().resize (m_nNodes, 1); //bota os carros para andar
+
+  m_waveBsmHelper.Install (i,
+                          Seconds (m_TotalSimTime),
+                          m_wavePacketSize,
+                          Seconds (m_waveInterval),
+                          m_gpsAccuracyNs,
+                          m_txSafetyRanges,
+                          chAccessMode,
+                          MilliSeconds (m_txMaxDelayMs));
+
+  m_streamIndex += m_waveBsmHelper.AssignStreams (c, m_streamIndex);
+
+
+ // WaveBsmHelper::GetNodesMoving ()[nodeId] = 1;
+
+/*
+  Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable> ();
+  int64_t stream = 2;
+  var->SetStream (stream);
+
+  OnOffHelper onoff1 ("ns3::UdpSocketFactory",Address ());
+  onoff1.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
+  onoff1.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
+
+  for (uint32_t k = 0; k < m_nNodes; k++){
+    AddressValue remoteAddress (InetSocketAddress (i.GetAddress (k), m_port));
+    onoff1.SetAttribute ("Remote", remoteAddress);
+    ApplicationContainer temp = onoff1.Install (c.Get (k));
+    temp.Start (Seconds (var->GetValue (1.0,2.0)));
+    temp.Stop (Seconds (m_TotalSimTime));
+  }
+*/
+}
+
+void VanetRoutingExperiment::CheckThroughput () //função que calcula tudo
+{
+  double wavePDR = 0.0;
+
+  int wavePktsSent = m_waveBsmHelper.GetWaveBsmStats ()->GetTxPktCount ();
+  int wavePktsReceived = m_waveBsmHelper.GetWaveBsmStats ()->GetRxPktCount ();
+
+  if (wavePktsSent > 0)
+    {
+      int wavePktsReceived = m_waveBsmHelper.GetWaveBsmStats ()->GetRxPktCount ();
+      wavePDR = (double) wavePktsReceived / (double) wavePktsSent;
+    }
+
+  int waveExpectedRxPktCount = m_waveBsmHelper.GetWaveBsmStats ()->GetExpectedRxPktCount (1);
+
+  int waveRxPktInRangeCount = m_waveBsmHelper.GetWaveBsmStats ()->GetRxPktInRangeCount (1);
+
+  double wavePDR1_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (1);
+  double wavePDR2_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (2);
+  double wavePDR3_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (3);
+  double wavePDR4_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (4);
+  double wavePDR5_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (5);
+  double wavePDR6_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (6);
+  double wavePDR7_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (7);
+  double wavePDR8_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (8);
+  double wavePDR9_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (9);
+  double wavePDR10_2 = m_waveBsmHelper.GetWaveBsmStats ()->GetBsmPdr (10);
+
+ // NS_LOG_UNCOND ("At t=" << (Simulator::Now ()).GetSeconds () << "s BSM_PDR1=" << wavePDR1_2 << " BSM_PDR2=" << wavePDR2_2 << " BSM_PDR3=" << wavePDR3_2 << " BSM_PDR4=" << wavePDR4_2 << " BSM_PDR5=" << wavePDR5_2 << " BSM_PDR6=" << wavePDR6_2 << " BSM_PDR7=" << wavePDR7_2 << " BSM_PDR8=" << wavePDR8_2 << " BSM_PDR9=" << wavePDR9_2 << " BSM_PDR10=" << wavePDR10_2  /*<< " MAC/PHY-OH=" << mac_phy_oh*/);
+  //NS_LOG_UNCOND ("At t=" << (Simulator::Now ()).GetSeconds () << "s Pacotes enviados=" << wavePktsSent << " Pacotes recebidos=" << wavePktsReceived << " PDR=" << wavePDR /*<< " MAC/PHY-OH=" << mac_phy_oh*/);
+  NS_LOG_UNCOND ("At t=" << (Simulator::Now ()).GetSeconds () << "s BSM_PDR1 (50m)=" << wavePDR1_2 << " BSM_PDR5 (250m)=" << wavePDR5_2 << " BSM_PDR10 (500m)=" << wavePDR10_2  /*<< " MAC/PHY-OH=" << mac_phy_oh*/);
+
+  std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
+
+  out << (Simulator::Now ()).GetSeconds () << ","
+     << wavePktsSent << ","
+    << wavePktsReceived << ","
+    << wavePDR << ","
+    << waveExpectedRxPktCount << ","
+    << waveRxPktInRangeCount << ","
+    << wavePDR1_2 << ","
+    << wavePDR2_2 << ","
+    << wavePDR3_2 << ","
+    << wavePDR4_2 << ","
+    << wavePDR5_2 << ","
+    << wavePDR6_2 << ","
+    << wavePDR7_2 << ","
+    << wavePDR8_2 << ","
+    << wavePDR9_2 << ","
+    << wavePDR10_2 << ""
+    << std::endl;
+
+    out.close ();
+  
+/*
+  m_waveBsmHelper.GetWaveBsmStats ()->SetRxPktCount (0);
+  m_waveBsmHelper.GetWaveBsmStats ()->SetTxPktCount (0);
+  
+  for (int index = 1; index <= 10; index++)
+    {
+      m_waveBsmHelper.GetWaveBsmStats ()->SetExpectedRxPktCount (index, 0);
+      m_waveBsmHelper.GetWaveBsmStats ()->SetRxPktInRangeCount (index, 0);
+    }
+
+  double currentTime = (Simulator::Now ()).GetSeconds ();
+  
+  if (currentTime <= (double) 0)
+    {
+      for (int index = 1; index <= 10; index++)
+        {
+          m_waveBsmHelper.GetWaveBsmStats ()->ResetTotalRxPktCounts (index);
+        }
+    }
+*/
+
+   Simulator::Schedule (Seconds (1.0), &VanetRoutingExperiment::CheckThroughput, this);
+}
+
+void VanetRoutingExperiment::WriteCsvHeader ()
+{
+  //blank out the last output file and write the column headers
+  std::ofstream out (m_CSVfileName.c_str ());
+  out << "Tempo(s)," <<
+    "Pkt_env," <<
+    "Pkt_Rcv," <<
+    "Pkt_PDR," <<
+    "Exp_Pkt_Rcv," <<
+    "Exp_Pkts_Range_Recv," <<
+    "BSM_PDR1," <<
+    "BSM_PDR2," <<
+    "BSM_PDR3," <<
+    "BSM_PDR4," <<
+    "BSM_PDR5," <<
+    "BSM_PDR6," <<
+    "BSM_PDR7," <<
+    "BSM_PDR8," <<
+    "BSM_PDR9," <<
+    "BSM_PDR10" <<
+    std::endl;
+  out.close ();
+
+  std::ofstream out2 (m_CSVfileName2.c_str ());
+  out2 << "BSM_PDR1,"
+       << "BSM_PDR2,"
+       << "BSM_PDR3,"
+       << "BSM_PDR4,"
+       << "BSM_PDR5,"
+       << "BSM_PDR6,"
+       << "BSM_PDR7,"
+       << "BSM_PDR8,"
+       << "BSM_PDR9,"
+       << "BSM_PDR10"
+//       << "AverageRoutingGoodputKbps,"
+//       << "MacPhyOverhead"
+       << std::endl;
+  out2.close ();
+}
+
+void VanetRoutingExperiment::ProcessOutputs ()
+{
+  // calculate and output final results
+  double bsm_pdr1 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (1);
+  double bsm_pdr2 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (2);
+  double bsm_pdr3 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (3);
+  double bsm_pdr4 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (4);
+  double bsm_pdr5 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (5);
+  double bsm_pdr6 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (6);
+  double bsm_pdr7 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (7);
+  double bsm_pdr8 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (8);
+  double bsm_pdr9 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (9);
+  double bsm_pdr10 = m_waveBsmHelper.GetWaveBsmStats ()->GetCumulativeBsmPdr (10);
+/*
+  double averageRoutingGoodputKbps = 0.0;
+  uint32_t totalBytesTotal = m_routingHelper->GetRoutingStats ().GetCumulativeRxBytes ();
+  averageRoutingGoodputKbps = (((double) totalBytesTotal * 8.0) / m_TotalSimTime) / 1000.0;
+*/
+  // calculate MAC/PHY overhead (mac-phy-oh)
+  // total WAVE BSM bytes sent
+  //uint32_t cumulativeWaveBsmBytes = m_waveBsmHelper.GetWaveBsmStats ()->GetTxByteCount ();
+ // uint32_t cumulativeRoutingBytes = m_routingHelper->GetRoutingStats ().GetCumulativeTxBytes ();
+ // uint32_t totalAppBytes = cumulativeWaveBsmBytes + cumulativeRoutingBytes;
+  //uint32_t totalPhyBytes = m_wifiPhyStats->GetTxBytes ();
+  // mac-phy-oh = (total-phy-bytes - total-app-bytes) / total-phy-bytes
+
+/* double mac_phy_oh = 0.0;
+  if (totalPhyBytes > 0)
+    {
+      mac_phy_oh = (double) (totalPhyBytes - totalAppBytes) / (double) totalPhyBytes;
+    }
+
+  if (m_log != 0)
+    {
+      NS_LOG_UNCOND ("BSM_PDR1=" << bsm_pdr1 << " BSM_PDR2=" << bsm_pdr2 << " BSM_PDR3=" << bsm_pdr3 << " BSM_PDR4=" << bsm_pdr4 << " BSM_PDR5=" << bsm_pdr5 << " BSM_PDR6=" << bsm_pdr6 << " BSM_PDR7=" << bsm_pdr7 << " BSM_PDR8=" << bsm_pdr8 << " BSM_PDR9=" << bsm_pdr9 << " BSM_PDR10=" << bsm_pdr10 << " Goodput=" << averageRoutingGoodputKbps << "Kbps MAC/PHY-oh=" << mac_phy_oh);
+
+    }
+*/
+  std::ofstream out (m_CSVfileName2.c_str (), std::ios::app);
+
+  out << bsm_pdr1 << ","
+      << bsm_pdr2 << ","
+      << bsm_pdr3 << ","
+      << bsm_pdr4 << ","
+      << bsm_pdr5 << ","
+      << bsm_pdr6 << ","
+      << bsm_pdr7 << ","
+      << bsm_pdr8 << ","
+      << bsm_pdr9 << ","
+      << bsm_pdr10 << ""
+//      << averageRoutingGoodputKbps << ","
+ //     << mac_phy_oh << ""
+      << std::endl;
+
+  out.close ();
+
+  //  monitor->SerializeToXmlFile ("results.xml" , false, false );
+
+
+  //m_os.close (); // close log file
+}
+
+
+int main (int argc, char *argv[])
+{
+  VanetRoutingExperiment teste;
+  teste.configeral();
+  teste.SetupWaveMessages();
+//  Ptr<FlowMonitor> flowMonitor;
+ // FlowMonitorHelper flowHelper;
+ // flowMonitor = flowHelper.InstallAll();
+  teste.Run();
+  teste.ProcessOutputs();
+//flowMonitor->SerializeToXmlFile("NameOfFile.xml", true, true);  
+
+  return 0;
+}
