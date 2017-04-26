@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  *
  * Based on vanet-routing-compare.cc - https://www.nsnam.org/doxygen/vanet-routing-compare_8cc.html
- * Author: Tiago do Vale Saraiva <tiagosarai@gmail.com>, <tiago.saraiva@uniriotec.br>
+ * Author: Tiago Saraiva <tiago.saraiva@uniriotec.br>
  *
  */
 /**
